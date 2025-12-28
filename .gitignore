@@ -1,0 +1,62 @@
+# WordPress Core - DO NOT TRACK
+wordpress/wp-admin/
+wordpress/wp-includes/
+wordpress/wp-*.php
+wordpress/xmlrpc.php
+wordpress/license.txt
+wordpress/readme.html
+wordpress/.htaccess
+
+# WordPress Config (may contain sensitive data)
+wordpress/wp-config.php
+
+# WordPress Content - Exclude user uploads and generated files
+wordpress/wp-content/uploads/
+wordpress/wp-content/cache/
+wordpress/wp-content/upgrade/
+wordpress/wp-content/backup/
+wordpress/wp-content/backup-db/
+wordpress/wp-content/debug.log
+wordpress/wp-content/upgrade-temp-backup/
+
+# Vendor dependencies (Composer)
+**/vendor/
+**/composer.lock
+
+# Node modules (npm)
+node_modules/
+**/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Database dumps (unless specifically needed)
+*.sql
+*.sql.gz
+
+# Docker
+.dockerignore
+
