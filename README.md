@@ -15,36 +15,6 @@ A modern, fully responsive WordPress theme for real estate platforms, built from
 - **Modern JavaScript**: Vanilla ES6+ with touch/swipe support
 
 
-## 🚀 Installation
-
-1. **Download or clone the theme:**
-   ```bash
-   git clone https://github.com/yourusername/estatein-theme.git
-   ```
-
-2. **Upload to WordPress:**
-   - Navigate to `wp-content/themes/`
-   - Upload the `estatein` folder
-   - Or use WordPress admin: Appearance → Themes → Add New → Upload Theme
-
-3. **Activate the theme:**
-   - Go to Appearance → Themes
-   - Click "Activate" on Estatein theme
-
-4. **Install required plugin:**
-   - Install and activate Advanced Custom Fields (ACF) plugin
-   - The theme will show an admin notice if ACF is missing
-
-5. **Configure menus:**
-   - Go to Appearance → Menus
-   - Create a menu and assign it to "Primary Menu" location
-   - Create a footer menu and assign it to "Footer Menu" location
-
-6. **Set up front page:**
-   - Go to Settings → Reading
-   - Set "Front page displays" to "A static page"
-   - Select your front page (or create a new one)
-
 ## 📁 Theme Structure
 
 ```
