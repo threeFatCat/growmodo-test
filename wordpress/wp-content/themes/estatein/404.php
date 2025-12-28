@@ -12,8 +12,6 @@ get_header();
             <div class="page-content">
                 <p><?php esc_html_e('It looks like nothing was found at this location. Maybe try one of the links below or a search?', 'estatein'); ?></p>
 
-                <?php get_search_form(); ?>
-
                 <div class="error-404-links">
                     <a href="<?php echo esc_url(home_url('/')); ?>" class="btn btn-primary"><?php esc_html_e('Go to Homepage', 'estatein'); ?></a>
                     <a href="<?php echo esc_url(home_url('/properties')); ?>" class="btn btn-outline"><?php esc_html_e('Browse Properties', 'estatein'); ?></a>

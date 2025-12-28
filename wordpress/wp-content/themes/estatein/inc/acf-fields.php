@@ -4,7 +4,11 @@
 // Register ACF Field Group for Hero Section
 // Note: Free ACF doesn't support Options Pages, so fields are assigned to Front Page
 // Users can edit the Front Page to modify hero content
-if (function_exists('acf_add_local_field_group')) {
+add_action('acf/init', function () {
+    if (!function_exists('acf_add_local_field_group')) {
+        return;
+    }
+
     acf_add_local_field_group(array(
         'key' => 'group_hero_section',
         'title' => __('Hero Section', 'estatein'),
@@ -726,7 +730,124 @@ if (function_exists('acf_add_local_field_group')) {
         'active' => true,
         'description' => '',
     ));
-}
+    // About Page Hero Section
+    acf_add_local_field_group(array(
+        'key' => 'group_about_hero_section',
+        'title' => __('About Page Hero Section', 'estatein'),
+        'fields' => array(
+            array(
+                'key' => 'field_about_hero_title',
+                'label' => __('Title', 'estatein'),
+                'name' => 'about_hero_title',
+                'type' => 'text',
+                'default_value' => __('Our Journey', 'estatein'),
+                'placeholder' => __('Enter title...', 'estatein'),
+            ),
+            array(
+                'key' => 'field_about_hero_description',
+                'label' => __('Description', 'estatein'),
+                'name' => 'about_hero_description',
+                'type' => 'textarea',
+                'default_value' => __('Our story is one of continuous growth and evolution. We started as a small team with big dreams, determined to create a real estate platform that transcended the ordinary. Over the years, we\'ve expanded our reach, forged valuable partnerships, and gained the trust of countless clients.', 'estatein'),
+                'placeholder' => __('Enter description...', 'estatein'),
+                'rows' => 4,
+            ),
+            array(
+                'key' => 'field_about_hero_image',
+                'label' => __('Hero Image', 'estatein'),
+                'name' => 'about_hero_image',
+                'type' => 'image',
+                'instructions' => __('Upload the hero image (hand holding house model)', 'estatein'),
+                'return_format' => 'id',
+                'preview_size' => 'medium',
+                'library' => 'all',
+            ),
+            array(
+                'key' => 'field_about_stat_1_number',
+                'label' => __('Statistic 1 - Number', 'estatein'),
+                'name' => 'about_stat_1_number',
+                'type' => 'text',
+                'default_value' => '200+',
+            ),
+            array(
+                'key' => 'field_about_stat_1_label',
+                'label' => __('Statistic 1 - Label', 'estatein'),
+                'name' => 'about_stat_1_label',
+                'type' => 'text',
+                'default_value' => __('Happy Customers', 'estatein'),
+            ),
+            array(
+                'key' => 'field_about_stat_2_number',
+                'label' => __('Statistic 2 - Number', 'estatein'),
+                'name' => 'about_stat_2_number',
+                'type' => 'text',
+                'default_value' => '10k+',
+            ),
+            array(
+                'key' => 'field_about_stat_2_label',
+                'label' => __('Statistic 2 - Label', 'estatein'),
+                'name' => 'about_stat_2_label',
+                'type' => 'text',
+                'default_value' => __('Properties For Clients', 'estatein'),
+            ),
+            array(
+                'key' => 'field_about_stat_3_number',
+                'label' => __('Statistic 3 - Number', 'estatein'),
+                'name' => 'about_stat_3_number',
+                'type' => 'text',
+                'default_value' => '16+',
+            ),
+            array(
+                'key' => 'field_about_stat_3_label',
+                'label' => __('Statistic 3 - Label', 'estatein'),
+                'name' => 'about_stat_3_label',
+                'type' => 'text',
+                'default_value' => __('Years of Experience', 'estatein'),
+            ),
+        ),
+        'location' => array(
+            array(
+                array(
+                    'param' => 'page_template',
+                    'operator' => '==',
+                    'value' => 'page-about-us.php',
+                ),
+            ),
+            array(
+                array(
+                    'param' => 'page',
+                    'operator' => '==',
+                    'value' => 'page',
+                ),
+                array(
+                    'param' => 'page_slug',
+                    'operator' => '==',
+                    'value' => 'about-us',
+                ),
+            ),
+            array(
+                array(
+                    'param' => 'page',
+                    'operator' => '==',
+                    'value' => 'page',
+                ),
+                array(
+                    'param' => 'page_slug',
+                    'operator' => '==',
+                    'value' => 'about',
+                ),
+            ),
+        ),
+        'menu_order' => 0,
+        'position' => 'normal',
+        'style' => 'default',
+        'label_placement' => 'top',
+        'instruction_placement' => 'label',
+        'hide_on_screen' => '',
+        'active' => true,
+        'description' => '',
+    ));
+});
 
 function estatein_add_theme_settings_page() {
     add_theme_page(

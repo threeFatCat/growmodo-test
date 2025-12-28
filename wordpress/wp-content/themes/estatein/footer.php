@@ -8,15 +8,12 @@
                         <?php
                         if (has_custom_logo()) {
                             the_custom_logo();
-                        } else {
-                            ?>
-                            <span class="logo-icon">🏠</span>
-                            <?php
-                        }
+                        } 
                         ?>
                         <span class="logo-text"><?php bloginfo('name'); ?></span>
                     </div>
                     <form class="footer-newsletter" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <?php wp_nonce_field('estatein_newsletter', 'estatein_newsletter_nonce'); ?>
                         <input type="hidden" name="action" value="estatein_newsletter">
                         <div class="footer-newsletter-input-wrapper">
                             <img src="<?php echo esc_url(get_template_directory_uri() . '/assets/images/mail.svg'); ?>" alt="" class="footer-newsletter-icon" aria-hidden="true">

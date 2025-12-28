@@ -7,12 +7,19 @@ define('ESTATEIN_VERSION', '1.0.0');
 define('ESTATEIN_THEME_DIR', get_template_directory());
 define('ESTATEIN_THEME_URI', get_template_directory_uri());
 
+
 function estatein_setup() {
     load_theme_textdomain('estatein', ESTATEIN_THEME_DIR . '/languages');
     
     add_theme_support('automatic-feed-links');
     add_theme_support('title-tag');
     add_theme_support('post-thumbnails');
+    
+    // Register custom image sizes
+    add_image_size('estatein-property-large', 800, 600, true);
+    add_image_size('estatein-property-thumb', 400, 300, true);
+    add_image_size('estatein-hero', 1920, 1080, true);
+    
     add_theme_support('html5', array(
         'search-form',
         'comment-form',
@@ -61,6 +68,12 @@ function estatein_content_width() {
 add_action('after_setup_theme', 'estatein_content_width', 0);
 
 function estatein_scripts() {
+    // Preconnect to Google Fonts for better performance
+    add_action('wp_head', function() {
+        echo '<link rel="preconnect" href="https://fonts.googleapis.com">' . "\n";
+        echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n";
+    }, 1);
+    
     wp_enqueue_style('estatein-google-fonts', 'https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800;900&display=swap', array(), null);
     
     wp_enqueue_style('estatein-style', get_stylesheet_uri(), array('estatein-google-fonts'), ESTATEIN_VERSION);
@@ -88,6 +101,12 @@ function estatein_widgets_init() {
 add_action('widgets_init', 'estatein_widgets_init');
 
 function estatein_newsletter_handler() {
+    // Security check: Verify nonce
+    if (!isset($_POST['estatein_newsletter_nonce']) || 
+        !wp_verify_nonce($_POST['estatein_newsletter_nonce'], 'estatein_newsletter')) {
+        wp_die(__('Security check failed. Please try again.', 'estatein'));
+    }
+    
     if (!isset($_POST['email']) || !is_email($_POST['email'])) {
         wp_redirect(home_url('/?newsletter=error'));
         exit;
@@ -220,6 +239,246 @@ function estatein_register_testimonial_post_type() {
 }
 add_action('init', 'estatein_register_testimonial_post_type', 0);
 
-require_once ESTATEIN_THEME_DIR . '/inc/acf-fields.php';
-require_once ESTATEIN_THEME_DIR . '/inc/template-functions.php';
+// Check for ACF plugin dependency
+if (!function_exists('get_field')) {
+    add_action('admin_notices', function() {
+        ?>
+        <div class="notice notice-error">
+            <p><strong><?php esc_html_e('Estatein Theme', 'estatein'); ?>:</strong> <?php esc_html_e('This theme requires the Advanced Custom Fields (ACF) plugin to function properly. Please install and activate it.', 'estatein'); ?></p>
+        </div>
+        <?php
+    });
+} else {
+    require_once ESTATEIN_THEME_DIR . '/inc/acf-fields.php';
+}
 
+require_once ESTATEIN_THEME_DIR . '/inc/template-functions.php';
+require_once ESTATEIN_THEME_DIR . '/inc/schema-markup.php';
+
+/**
+ * Add current-menu-item class to custom menu items that match post type archives
+ * Using wp_nav_menu_objects filter which runs earlier and allows us to modify the item object
+ */
+function estatein_nav_menu_objects($sorted_menu_items, $args) {
+    // Only process primary menu
+    if (isset($args->theme_location) && $args->theme_location !== 'primary') {
+        return $sorted_menu_items;
+    }
+    
+    // Check if we're on a post type archive page
+    if (is_post_type_archive()) {
+        $post_type = get_query_var('post_type');
+        if (is_array($post_type)) {
+            $post_type = reset($post_type);
+        }
+        
+        if ($post_type) {
+            // Get the archive URL for this post type
+            $archive_url = get_post_type_archive_link($post_type);
+            
+            if ($archive_url) {
+                // Normalize archive URL path
+                $archive_path = untrailingslashit(parse_url($archive_url, PHP_URL_PATH));
+                $archive_path_no_slash = ltrim($archive_path, '/');
+                
+                // Get current request path
+                $request_uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+                $current_path = untrailingslashit(parse_url($request_uri, PHP_URL_PATH));
+                $current_path_no_slash = ltrim($current_path, '/');
+                
+                foreach ($sorted_menu_items as $item) {
+                    // Skip if already marked as current
+                    if (in_array('current-menu-item', $item->classes)) {
+                        continue;
+                    }
+                    
+                    // Normalize menu item URL path
+                    $item_path = untrailingslashit(parse_url($item->url, PHP_URL_PATH));
+                    $item_path_no_slash = ltrim($item_path, '/');
+                    
+                    // Multiple comparison methods
+                    $matches = false;
+                    
+                    // Direct path comparison
+                    if ($item_path === $archive_path || $item_path === $current_path) {
+                        $matches = true;
+                    }
+                    
+                    // Path without leading slash
+                    if ($item_path_no_slash === $archive_path_no_slash || $item_path_no_slash === $current_path_no_slash) {
+                        $matches = true;
+                    }
+                    
+                    // Check if URL contains post type slug
+                    if (strpos($item->url, '/' . $post_type) !== false || 
+                        strpos($item->url, $post_type . '/') !== false ||
+                        $item_path === '/' . $post_type) {
+                        $matches = true;
+                    }
+                    
+                    // Full URL comparison (normalized)
+                    $item_url_normalized = untrailingslashit(str_replace(array('http://', 'https://'), '', $item->url));
+                    $archive_url_normalized = untrailingslashit(str_replace(array('http://', 'https://'), '', $archive_url));
+                    if ($item_url_normalized === $archive_url_normalized) {
+                        $matches = true;
+                    }
+                    
+                    if ($matches) {
+                        $item->classes[] = 'current-menu-item';
+                        $item->current = true;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Also check for single post type pages (add ancestor class)
+    if (is_singular('property') || is_singular('testimonial')) {
+        $post_type = get_post_type();
+        $archive_url = get_post_type_archive_link($post_type);
+        
+        if ($archive_url) {
+            $archive_path = untrailingslashit(parse_url($archive_url, PHP_URL_PATH));
+            $archive_path_no_slash = ltrim($archive_path, '/');
+            
+            foreach ($sorted_menu_items as $item) {
+                if (in_array('current-menu-ancestor', $item->classes)) {
+                    continue;
+                }
+                
+                $item_path = untrailingslashit(parse_url($item->url, PHP_URL_PATH));
+                $item_path_no_slash = ltrim($item_path, '/');
+                
+                $matches = false;
+                
+                if ($item_path === $archive_path || 
+                    $item_path_no_slash === $archive_path_no_slash ||
+                    strpos($item->url, '/' . $post_type) !== false ||
+                    $item_path === '/' . $post_type) {
+                    $matches = true;
+                }
+                
+                if ($matches) {
+                    $item->classes[] = 'current-menu-ancestor';
+                }
+            }
+        }
+    }
+    
+    return $sorted_menu_items;
+}
+add_filter('wp_nav_menu_objects', 'estatein_nav_menu_objects', 10, 2);
+
+/**
+ * Fallback: Also use nav_menu_css_class filter as backup
+ */
+function estatein_nav_menu_css_class($classes, $item) {
+    // Check if we're on a post type archive page
+    if (is_post_type_archive()) {
+        $post_type = get_query_var('post_type');
+        if (is_array($post_type)) {
+            $post_type = reset($post_type);
+        }
+        
+        if ($post_type) {
+            // Get the archive URL for this post type
+            $archive_url = get_post_type_archive_link($post_type);
+            
+            if ($archive_url) {
+                // Normalize URLs - remove scheme and trailing slashes
+                $item_url_normalized = untrailingslashit(str_replace(array('http://', 'https://'), '', $item->url));
+                $archive_url_normalized = untrailingslashit(str_replace(array('http://', 'https://'), '', $archive_url));
+                
+                // Get paths
+                $item_path = untrailingslashit(parse_url($item->url, PHP_URL_PATH));
+                $archive_path = untrailingslashit(parse_url($archive_url, PHP_URL_PATH));
+                
+                // Get current request URI
+                $current_uri = untrailingslashit($_SERVER['REQUEST_URI']);
+                $current_path = untrailingslashit(parse_url($current_uri, PHP_URL_PATH));
+                
+                // Multiple comparison methods
+                if ($item_url_normalized === $archive_url_normalized || 
+                    $item_path === $archive_path || 
+                    $item_path === $current_path ||
+                    $item_path === '/' . $post_type ||
+                    strpos($item->url, '/' . $post_type) !== false) {
+                    $classes[] = 'current-menu-item';
+                }
+            }
+        }
+    }
+    
+    // Also check for single post type pages (add ancestor class)
+    if (is_singular('property') || is_singular('testimonial')) {
+        $post_type = get_post_type();
+        $archive_url = get_post_type_archive_link($post_type);
+        
+        if ($archive_url) {
+            $item_url_normalized = untrailingslashit(str_replace(array('http://', 'https://'), '', $item->url));
+            $archive_url_normalized = untrailingslashit(str_replace(array('http://', 'https://'), '', $archive_url));
+            
+            $item_path = untrailingslashit(parse_url($item->url, PHP_URL_PATH));
+            $archive_path = untrailingslashit(parse_url($archive_url, PHP_URL_PATH));
+            
+            if ($item_url_normalized === $archive_url_normalized || 
+                $item_path === $archive_path || 
+                $item_path === '/' . $post_type ||
+                strpos($item->url, '/' . $post_type) !== false) {
+                $classes[] = 'current-menu-ancestor';
+            }
+        }
+    }
+    
+    return $classes;
+}
+add_filter('nav_menu_css_class', 'estatein_nav_menu_css_class', 20, 2);
+
+/**
+ * Add SEO meta tags (description, Open Graph)
+ */
+function estatein_seo_meta_tags() {
+    if (is_singular()) {
+        $description = get_the_excerpt() ?: wp_trim_words(get_the_content(), 30);
+        $title = get_the_title();
+        $url = get_permalink();
+        $image = has_post_thumbnail() ? get_the_post_thumbnail_url(get_the_ID(), 'large') : '';
+    } elseif (is_archive()) {
+        $description = get_the_archive_description() ?: wp_trim_words(get_the_archive_title(), 30);
+        $title = get_the_archive_title();
+        $url = get_term_link(get_queried_object()) ?: get_post_type_archive_link(get_post_type());
+        $image = '';
+    } elseif (is_home() || is_front_page()) {
+        $description = get_bloginfo('description');
+        $title = get_bloginfo('name');
+        $url = home_url('/');
+        $image = '';
+    } else {
+        $description = get_bloginfo('description');
+        $title = get_bloginfo('name');
+        $url = home_url('/');
+        $image = '';
+    }
+    
+    // Clean up description
+    $description = wp_strip_all_tags($description);
+    $description = esc_attr(wp_trim_words($description, 30));
+    
+    // Meta description
+    if ($description) {
+        echo '<meta name="description" content="' . $description . '">' . "\n";
+    }
+    
+    // Open Graph tags
+    echo '<meta property="og:title" content="' . esc_attr($title) . '">' . "\n";
+    if ($description) {
+        echo '<meta property="og:description" content="' . $description . '">' . "\n";
+    }
+    echo '<meta property="og:type" content="' . (is_singular() ? 'article' : 'website') . '">' . "\n";
+    echo '<meta property="og:url" content="' . esc_url($url) . '">' . "\n";
+    if ($image) {
+        echo '<meta property="og:image" content="' . esc_url($image) . '">' . "\n";
+    }
+    echo '<meta property="og:site_name" content="' . esc_attr(get_bloginfo('name')) . '">' . "\n";
+}
+add_action('wp_head', 'estatein_seo_meta_tags', 2);

@@ -26,18 +26,139 @@
     const menuBackdrop = document.querySelector('.menu-backdrop');
     const body = document.body;
     
+    let scrollPosition = 0;
+    let bannerWasCollapsed = false;
+    
+    function updateScrollState() {
+        scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+        const isScrolled = scrollPosition > 0;
+        body.classList.toggle('is-scrolled', isScrolled);
+    }
+    
+    function isBannerVisible() {
+        if (!topBanner) return false;
+        const isHidden = topBanner.classList.contains('hidden');
+        const rect = topBanner.getBoundingClientRect();
+        const isInViewport = rect.height > 0 && rect.top >= 0 && rect.bottom > 0;
+        return !isHidden && isInViewport;
+    }
+    
+    window.addEventListener('scroll', updateScrollState);
+    updateScrollState();
+    
     function openMenu() {
-        if (navButtonsContainer) navButtonsContainer.classList.add('active');
-        if (menuBackdrop) menuBackdrop.classList.add('active');
+        const bannerVisible = isBannerVisible();
+        const isScrolled = scrollPosition > 0;
+        const siteHeader = document.querySelector('.site-header');
+        
+        // Ensure header is positioned correctly when menu opens
+        if (siteHeader && isScrolled) {
+            // Force reflow to ensure fixed positioning is applied
+            siteHeader.style.top = '0';
+            siteHeader.style.position = 'fixed';
+        }
+        
+        if (navButtonsContainer) {
+            navButtonsContainer.classList.add('active');
+            // Disable transition first to prevent animation
+            navButtonsContainer.style.setProperty('transition', 'none', 'important');
+            // Force reflow to ensure transition is disabled
+            navButtonsContainer.offsetHeight;
+            // Set padding using shorthand to override CSS padding: 24px
+            // Format: padding: top right bottom left
+            navButtonsContainer.style.setProperty('padding', '68px 24px 24px 24px', 'important');
+            // Force another reflow to ensure padding is applied
+            navButtonsContainer.offsetHeight;
+            // Keep transition disabled - we don't need it for padding
+        }
+        if (menuBackdrop) {
+            menuBackdrop.classList.add('active');
+            // Force backdrop to be visible immediately - disable transition temporarily
+            menuBackdrop.style.transition = 'none';
+            menuBackdrop.style.opacity = '1';
+            menuBackdrop.style.visibility = 'visible';
+            // Re-enable transition after a brief moment
+            setTimeout(function() {
+                if (menuBackdrop) {
+                    menuBackdrop.style.transition = '';
+                }
+            }, 10);
+        }
         if (menuToggle) menuToggle.setAttribute('aria-expanded', 'true');
         body.classList.add('menu-open');
+        
+        // Force page padding if not scrolled
+        const pageElement = document.getElementById('page');
+        if (pageElement) {
+            if (!isScrolled) {
+                // Disable transition first
+                pageElement.style.setProperty('transition', 'none', 'important');
+                // Force reflow to ensure transition is disabled
+                pageElement.offsetHeight;
+                // Now set padding-top
+                const bannerVisible = isBannerVisible();
+                const paddingValue = (bannerVisible && topBanner && !topBanner.classList.contains('menu-collapsed')) ? '131px' : '68px';
+                pageElement.style.setProperty('padding-top', paddingValue, 'important');
+                // Force another reflow to ensure padding is applied
+                pageElement.offsetHeight;
+                // Keep transition disabled - we don't need it for padding
+            } else {
+                // When scrolled, ensure padding-top is 0 on #page
+                pageElement.style.setProperty('padding-top', '0', 'important');
+            }
+        }
+        
+        // Set body padding-top when scrolled
+        if (isScrolled) {
+            // Disable transition first
+            body.style.setProperty('transition', 'none', 'important');
+            // Force reflow to ensure transition is disabled
+            body.offsetHeight;
+            // Set padding-top to 66px when scrolled
+            body.style.setProperty('padding-top', '66px', 'important');
+            // Force another reflow to ensure padding is applied
+            body.offsetHeight;
+            // Keep transition disabled - we don't need it for padding
+        } else {
+            // When at top, ensure body padding-top is 0
+            body.style.setProperty('padding-top', '0', 'important');
+        }
+        
+        if (topBanner && bannerVisible && !isScrolled) {
+            bannerWasCollapsed = true;
+            topBanner.classList.add('menu-collapsed');
+        } else {
+            bannerWasCollapsed = false;
+        }
     }
     
     function closeMenu() {
-        if (navButtonsContainer) navButtonsContainer.classList.remove('active');
-        if (menuBackdrop) menuBackdrop.classList.remove('active');
+        
+        // Remove body padding-top when menu closes
+        body.style.setProperty('padding-top', '0', 'important');
+        
+        // Remove #page padding-top when menu closes
+        const pageElement = document.getElementById('page');
+        if (pageElement) {
+            pageElement.style.setProperty('padding-top', '0', 'important');
+        }
+        
+        if (navButtonsContainer) {
+            navButtonsContainer.classList.remove('active');
+            navButtonsContainer.style.paddingTop = '';
+        }
+        if (menuBackdrop) {
+            menuBackdrop.classList.remove('active');
+            menuBackdrop.style.opacity = '';
+            menuBackdrop.style.visibility = '';
+        }
         if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
         body.classList.remove('menu-open');
+        
+        if (topBanner && bannerWasCollapsed) {
+            topBanner.classList.remove('menu-collapsed');
+            bannerWasCollapsed = false;
+        }
     }
     
     if (menuToggle && navButtonsContainer) {
@@ -220,6 +341,8 @@
                         card.style.minWidth = `${sliderWidth}px`;
                         card.style.maxWidth = `${sliderWidth}px`;
                         card.style.flexShrink = '0';
+                        card.style.position = 'relative';
+                        card.style.left = 'auto';
                     });
                     
                     // Make slides width based on their card count and position them
@@ -232,19 +355,33 @@
                         slide.style.display = 'flex';
                         slide.style.flexDirection = 'row';
                         slide.style.flexShrink = '0';
+                        slide.style.position = 'relative';
                     });
                 } else {
                     // In desktop, use grouped slides
                     track.style.width = `${totalSlides * sliderWidth}px`;
+                    
+                    // Reset card styles for desktop
+                    currentCards.forEach((card) => {
+                        card.style.width = '';
+                        card.style.minWidth = '';
+                        card.style.maxWidth = '';
+                        card.style.position = '';
+                        card.style.left = '';
+                    });
                     
                     // Ensure each slide is exactly the slider width
                     slides.forEach((slide) => {
                         slide.style.width = `${sliderWidth}px`;
                         slide.style.minWidth = `${sliderWidth}px`;
                         slide.style.maxWidth = `${sliderWidth}px`;
+                        slide.style.display = '';
+                        slide.style.flexDirection = '';
+                        slide.style.position = '';
                     });
                 }
             }
+            
         }
 
         function updateSlider() {
@@ -334,15 +471,43 @@
             });
         }
 
+        // Store previous mobile state for comparison
+        let previousMobileState = isMobile();
+        
         // Initialize on load and resize
         function handleResize() {
-            const wasMobile = isMobile();
+            const currentMobileState = isMobile();
+            
+            // Force complete re-initialization
             initializeTrack();
+            
+            // Force a reflow to ensure styles are applied before calculating positions
+            track.offsetHeight;
+            
+            // Recalculate total slides after track initialization
+            totalSlides = getTotalSlides();
+            
             // Reset to first slide if switching between mobile/desktop
-            if (wasMobile !== isMobile()) {
+            if (previousMobileState !== currentMobileState) {
                 currentSlide = 1;
             }
-            updateSlider();
+            
+            // Update previous state for next comparison
+            previousMobileState = currentMobileState;
+            
+            // Ensure currentSlide is valid for new layout
+            if (currentSlide > totalSlides) {
+                currentSlide = totalSlides;
+            }
+            if (currentSlide < 1) {
+                currentSlide = 1;
+            }
+            
+            // Small delay to ensure browser has applied style changes, then update
+            setTimeout(function() {
+                updateSlider();
+            }, 10);
+            
         }
 
         // Initialize
@@ -356,7 +521,9 @@
 
         window.addEventListener('resize', function() {
             clearTimeout(window.resizeTimeout);
-            window.resizeTimeout = setTimeout(handleResize, 250);
+            window.resizeTimeout = setTimeout(function() {
+                handleResize();
+            }, 250);
         });
 
         // Keyboard navigation
@@ -483,11 +650,27 @@
                     // In desktop, use grouped slides
                     track.style.width = `${totalSlides * sliderWidth}px`;
                     
-                    // Ensure each slide is exactly the slider width
+                    // Reset card styles for desktop (clear mobile-specific styles)
+                    currentCards.forEach((card) => {
+                        card.style.width = '';
+                        card.style.minWidth = '';
+                        card.style.maxWidth = '';
+                        card.style.flexShrink = '';
+                        card.style.display = '';
+                        card.style.visibility = '';
+                        card.style.position = '';
+                        card.style.left = '';
+                    });
+                    
+                    // Ensure each slide is exactly the slider width and reset mobile styles
                     slides.forEach((slide) => {
                         slide.style.width = `${sliderWidth}px`;
                         slide.style.minWidth = `${sliderWidth}px`;
                         slide.style.maxWidth = `${sliderWidth}px`;
+                        slide.style.display = '';
+                        slide.style.flexDirection = '';
+                        slide.style.overflow = '';
+                        slide.style.position = '';
                     });
                 }
             } else {
@@ -612,15 +795,43 @@
             });
         }
 
+        // Store previous mobile state for comparison
+        let previousMobileState = isMobile();
+        
         // Initialize on load and resize
         function handleResize() {
-            const wasMobile = isMobile();
+            const currentMobileState = isMobile();
+            
+            // Force complete re-initialization
             initializeTrack();
+            
+            // Force a reflow to ensure styles are applied before calculating positions
+            track.offsetHeight;
+            
+            // Recalculate total slides after track initialization
+            totalSlides = getTotalSlides();
+            
             // Reset to first slide if switching between mobile/desktop
-            if (wasMobile !== isMobile()) {
+            if (previousMobileState !== currentMobileState) {
                 currentSlide = 1;
             }
-            updateSlider();
+            
+            // Update previous state for next comparison
+            previousMobileState = currentMobileState;
+            
+            // Ensure currentSlide is valid for new layout
+            if (currentSlide > totalSlides) {
+                currentSlide = totalSlides;
+            }
+            if (currentSlide < 1) {
+                currentSlide = 1;
+            }
+            
+            // Small delay to ensure browser has applied style changes, then update
+            setTimeout(function() {
+                updateSlider();
+            }, 10);
+            
         }
 
         // Initialize
@@ -634,7 +845,9 @@
 
         window.addEventListener('resize', function() {
             clearTimeout(window.testimonialsResizeTimeout);
-            window.testimonialsResizeTimeout = setTimeout(handleResize, 250);
+            window.testimonialsResizeTimeout = setTimeout(function() {
+                handleResize();
+            }, 250);
         });
 
         // Keyboard navigation
@@ -768,11 +981,27 @@
                     // In desktop, use grouped slides
                     track.style.width = `${totalSlides * sliderWidth}px`;
                     
-                    // Ensure each slide is exactly the slider width
+                    // Reset card styles for desktop (clear mobile-specific styles)
+                    currentCards.forEach((card) => {
+                        card.style.width = '';
+                        card.style.minWidth = '';
+                        card.style.maxWidth = '';
+                        card.style.flexShrink = '';
+                        card.style.display = '';
+                        card.style.visibility = '';
+                        card.style.position = '';
+                        card.style.left = '';
+                    });
+                    
+                    // Ensure each slide is exactly the slider width and reset mobile styles
                     slides.forEach((slide) => {
                         slide.style.width = `${sliderWidth}px`;
                         slide.style.minWidth = `${sliderWidth}px`;
                         slide.style.maxWidth = `${sliderWidth}px`;
+                        slide.style.display = '';
+                        slide.style.flexDirection = '';
+                        slide.style.overflow = '';
+                        slide.style.position = '';
                     });
                 }
             } else {
@@ -944,15 +1173,43 @@
             });
         }
 
+        // Store previous mobile state for comparison
+        let previousMobileState = isMobile();
+        
         // Initialize on load and resize
         function handleResize() {
-            const wasMobile = isMobile();
+            const currentMobileState = isMobile();
+            
+            // Force complete re-initialization
             initializeTrack();
+            
+            // Force a reflow to ensure styles are applied before calculating positions
+            track.offsetHeight;
+            
+            // Recalculate total slides after track initialization
+            totalSlides = getTotalSlides();
+            
             // Reset to first slide if switching between mobile/desktop
-            if (wasMobile !== isMobile()) {
+            if (previousMobileState !== currentMobileState) {
                 currentSlide = 1;
             }
-            updateSlider();
+            
+            // Update previous state for next comparison
+            previousMobileState = currentMobileState;
+            
+            // Ensure currentSlide is valid for new layout
+            if (currentSlide > totalSlides) {
+                currentSlide = totalSlides;
+            }
+            if (currentSlide < 1) {
+                currentSlide = 1;
+            }
+            
+            // Small delay to ensure browser has applied style changes, then update
+            setTimeout(function() {
+                updateSlider();
+            }, 10);
+            
         }
 
         // Initialize
@@ -966,7 +1223,9 @@
 
         window.addEventListener('resize', function() {
             clearTimeout(window.faqsResizeTimeout);
-            window.faqsResizeTimeout = setTimeout(handleResize, 250);
+            window.faqsResizeTimeout = setTimeout(function() {
+                handleResize();
+            }, 250);
         });
 
         // Keyboard navigation

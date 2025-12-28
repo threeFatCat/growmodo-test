@@ -32,7 +32,6 @@
                     <span class="screen-reader-text"><?php esc_html_e('Primary Menu', 'estatein'); ?></span>
                     <span class="menu-icon"></span>
                 </button>
-                <div class="menu-backdrop"></div>
                 <div class="nav-buttons-container">
                     <?php
                     wp_nav_menu(array(
@@ -48,4 +47,7 @@
             <a href="<?php echo esc_url(home_url('/contact-us')); ?>" class="btn-contact"><?php esc_html_e('Contact Us', 'estatein'); ?></a>
         </div>
     </header>
+    
+    <!-- Menu backdrop moved outside header to ensure full viewport coverage -->
+    <div class="menu-backdrop"></div>
 
